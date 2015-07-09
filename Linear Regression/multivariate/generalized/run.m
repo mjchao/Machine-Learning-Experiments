@@ -1,4 +1,4 @@
-function [] = run( thetas , m , noiseSize )
+function [ approxThetas ] = run( thetas , m , noiseSize )
 %RUN Runs this version of multivariate linear regression for the
 % general case. It generates data points using a given linear
 % relationship, applies some noise to it, then uses multivariate
@@ -17,6 +17,5 @@ function [] = run( thetas , m , noiseSize )
 n = size( thetas , 2 );
 initialTheta = zeros( 1 , n );
 approxThetas = gradientDescent( initialTheta , x , y );
-approxThetas
 end
 
