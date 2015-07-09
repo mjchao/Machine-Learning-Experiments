@@ -1,9 +1,0 @@
-function [ x , y ] = genData( thetas )
-%GENDATA generates linear data (y as a function of x) randomly. the data
-% has a relationship y = theta_0 * x_0 + theta_1 * x_1 + ... + theta_n * x_n
-% +some random noise
-
-
-
-end
-
