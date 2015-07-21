@@ -10,6 +10,7 @@ m = length(y); % number of training examples
 % You need to return the following variables correctly 
 J = 0;
 grad = zeros(size(theta));
+n = size( X , 2 );
 
 % ====================== YOUR CODE HERE ======================
 % Instructions: Compute the cost of a particular choice of theta.
@@ -17,9 +18,10 @@ grad = zeros(size(theta));
 %               Compute the partial derivatives and set grad to the partial
 %               derivatives of the cost w.r.t. each parameter in theta
 
-
-
-
+[normalJ , normalGrad] = costFunction( theta , X , y );
+J = normalJ + lambda/(2*m) * sum( theta(2:n) .^2 );
+grad( 1 ) = normalGrad( 1 );
+grad( 2:n ) = normalGrad( 2:n ) + lambda/m * theta( 2:n );
 
 
 % =============================================================
