@@ -1,0 +1,11 @@
+function [ newThetas ] = gradDescent( thetas , X , y )
+%UNTITLED Summary of this function goes here
+%   Detailed explanation goes here
+[m , n] = size( thetas );
+
+dThetas = []
+for i = 1:n 
+   dThetas( i ) = 
+end
+end
+

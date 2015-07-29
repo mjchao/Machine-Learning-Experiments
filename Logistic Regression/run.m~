@@ -1,0 +1,11 @@
+function [] = run( thetas , m , noiseSize )
+%RUN runs the logistic regression example
+[X , y] = genData( thetas , m , noiseSize );
+plotData( X , y )
+
+regressionThetas = gradDescent( [ 0 , 0 , 0 ] , X , y , 0.01 , 1000 );
+X1 = linspace( 0 , 1 , 100 )
+X2 = 
+
+end
+
