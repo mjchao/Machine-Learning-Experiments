@@ -14,9 +14,9 @@ noise = rand( m , 1 ) * noiseSize * 2 - noiseSize ;
 probabilities = sigmoid( X * thetas' + noise );
 for i = 1:m
     if ( probabilities( i ) > 0.5 )
-        distribution = [ 0.1 , 0.9 ];
+        distribution = [ 0.2 , 0.8 ];
     else
-        distribution = [ 0.9 , 0.1 ];
+        distribution = [ 0.8 , 0.2 ];
     end
     y(i) = randsample( [0,1] , 1 , true , distribution );
     %y(i) = randsample( [0,1] , 1 , true , [ 1-probabilities( i ) ,  probabilities( i ) ] );
