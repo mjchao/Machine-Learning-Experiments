@@ -111,8 +111,96 @@ def DrawInputs():
                 img.putpixel((x, y), 255)
     img.save("digit.png", "png")
 
+
+class ComplexLearner(object):
+    """Applies a CNN to digit classification.
+    """
+    @staticmethod
+    def CreateWeightVariable(shape):
+        return tf.Variable(tf.truncated_normal(shape, stddev=0.1))
+
+    @staticmethod
+    def CreateBiasVariable(shape):
+        return tf.Variable(tf.constant(0.1, shape=shape))
+
+    @staticmethod
+    def CreateConv2d(x, W):
+        return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding="SAME")
+
+    @staticmethod
+    def CreateMaxPool2x2(x):
+        return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], 
+                              strides=[1, 2, 2, 1], padding="SAME")
+
+    def __init__(self):
+        self.sess_ = tf.Session()
+        self.x_ = tf.placeholder(tf.float32, [None, WIDTH*HEIGHT])
+        W_conv1 = ComplexLearner.CreateWeightVariable([5, 5, 1, 32])
+        b_conv1 = ComplexLearner.CreateBiasVariable([32])
+        x_image = tf.reshape(self.x_, [-1, WIDTH, HEIGHT, 1])
+        h_conv1 = tf.nn.relu(ComplexLearner.CreateConv2d(x_image, W_conv1) + 
+                             b_conv1)
+        h_pool1 = ComplexLearner.CreateMaxPool2x2(h_conv1)
+
+        W_conv2 = ComplexLearner.CreateWeightVariable([5, 5, 32, 64])
+        b_conv2 = ComplexLearner.CreateBiasVariable([64])
+        h_conv2 = tf.nn.relu(ComplexLearner.CreateConv2d(h_pool1, W_conv2) + 
+                             b_conv2)
+        h_pool2 = ComplexLearner.CreateMaxPool2x2(h_conv2)
+
+        # TODO: where did 7 x 7 come from?
+        W_fc1 = ComplexLearner.CreateWeightVariable([7 * 7 * 64, 1024])
+        b_fc1 = ComplexLearner.CreateBiasVariable([1024])
+        h_pool2_flat = tf.reshape(h_pool2, [-1, 7*7*64])
+        h_fc1 = tf.nn.relu(tf.matmul(h_pool2_flat, W_fc1) + b_fc1)
+        self.keep_prob_ = tf.placeholder(tf.float32)
+        h_fc1_drop = tf.nn.dropout(h_fc1, self.keep_prob_)
+
+        W_fc2 = ComplexLearner.CreateWeightVariable([1024, 10])
+        b_fc2 = ComplexLearner.CreateBiasVariable([10])
+        self.y_ = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
+
+    def Train(self, train_data, batch_size=50, num_iters=20000):
+        y_true = tf.placeholder(tf.float32, [None, 10])
+        cross_entropy_loss = tf.reduce_mean(-tf.reduce_sum(self.y_ * 
+                                        tf.log(y_true), reduction_indices=[1]))
+        train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy_loss)
+        correct_prediction = tf.equal(tf.argmax(self.y_, 1), 
+                                      tf.argmax(y_true, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+        self.sess_.run(tf.initialize_all_variables())
+        for i in range(num_iters):
+            batch = train_data.next_batch(batch_size)
+            if i % 100 == 0:
+                train_accuracy = accuracy.eval(feed_dict={self.x_: batch[0], 
+                    y_true: batch[1], self.keep_prob_: 1.0}, session=self.sess_)
+                print "Step %d accuracy: %g" %(i, train_accuracy)
+            train_step.run(feed_dict={self.x_: batch[0], y_true: batch[1], 
+                    self.keep_prob_: 0.5}, session=self.sess_)
+
+    def Test(self, test_data):
+        y_true = tf.placeholder(tf.float32, [None, 10])
+        correct_prediction = tf.equal(tf.argmax(self.y_, 1), 
+                                      tf.argmax(y_true, 1))
+        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+        print "Test accuracy:", accuracy.eval(feed_dict={
+            self.x_: test_data.images, y_true: test_data.labels, 
+            self.keep_prob_: 1.0}, session=self.sess_)
+
+def BuildComplexLearner():
+    mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+    learner = ComplexLearner()
+    ThresholdPixels(mnist.train.images)
+    learner.Train(mnist.train)
+    ThresholdPixels(mnist.test.images)
+    learner.Test(mnist.test)
+    return learner
+
+
 def main():
-    BuildSimpleLearner()
+    BuildComplexLearner()
+    #BuildSimpleLearner()
     #DrawInputs()
 
 
