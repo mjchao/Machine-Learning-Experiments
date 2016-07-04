@@ -8,4 +8,15 @@ import pandas as pd
 import sklearn
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+
+WIDTH = 28
+HEIGHT = 28
+
+class Learner(object):
+    def __init__(self):
+        self.x_ = tf.placeholder(tf.float32, [None, WIDTH*HEIGHT])
+
+def main():
+    mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+
+if __name__ == "__main__": main()
