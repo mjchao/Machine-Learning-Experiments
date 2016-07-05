@@ -63,7 +63,7 @@ class SimpleLearner(object):
 
     def Test(self, test_data):
         """Tests the model on unseen test data.
-        
+
         Args:
             test_data: The test data. It must provide field images and a field
                 labels that give us the test features and labels.
@@ -135,6 +135,8 @@ class ComplexLearner(object):
                               strides=[1, 2, 2, 1], padding="SAME")
 
     def __init__(self):
+        """Creates a learner that applies convolution neural networks.
+        """
         self.sess_ = tf.Session()
         self.x_ = tf.placeholder(tf.float32, [None, WIDTH*HEIGHT])
         W_conv1 = ComplexLearner.CreateWeightVariable([5, 5, 1, 32])
@@ -172,7 +174,16 @@ class ComplexLearner(object):
         self.saver_ = tf.train.Saver()
         self.sess_.run(init)
 
-    def Train(self, train_data, batch_size=50, num_iters=20000):
+    def Train(self, train_data, batch_size=50, num_iters=20000, 
+              save_file="model.ckpt"):
+        """Trains the CNN model and saves it.
+        
+        Args:
+            train_data: The training data. It must provide a function next_batch
+                to be used in the Adam optimizer.
+            batch_size: (int) Size of the batches to be used.
+            num_iters: (int) Number of iterations for which to train.
+        """
         correct_prediction = tf.equal(tf.argmax(self.y_, 1), 
                                       tf.argmax(self.y_true_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
@@ -187,7 +198,7 @@ class ComplexLearner(object):
             self.train_step_.run(feed_dict={self.x_: batch[0], self.y_true_:
                         batch[1], self.keep_prob_: 0.5}, session=self.sess_)
 
-        self.Save("thresholded_model.ckpt")
+        self.Save(save_file)
 
 
     def Predict(self, features):
@@ -198,6 +209,12 @@ class ComplexLearner(object):
                               {self.x_: features, self.keep_prob_: 1.0})
 
     def Test(self, test_data):
+        """Tests the model on unseen test data.
+
+        Args:
+            test_data: The test data. It must provide field images and a field
+                labels that give us the test features and labels.
+        """
         y_true = tf.placeholder(tf.float32, [None, 10])
         correct_prediction = tf.equal(tf.argmax(self.y_, 1), 
                                       tf.argmax(y_true, 1))
@@ -207,13 +224,28 @@ class ComplexLearner(object):
             self.keep_prob_: 1.0}, session=self.sess_)
 
     def Save(self, filename):
+        """Saves the model at the given file.
+        
+        Args:
+            filename: (string) The location at which to save the model.
+        """
         self.saver_.save(self.sess_, filename)
 
     def Restore(self, filename):
+        """Restores the model that was saved at the given file.
+        
+        Args:
+            filename: (string) The file from which to load the model.
+        """
         self.saver_.restore(self.sess_, filename)
 
 
 def BuildComplexLearner(restore=True):
+    """Builds a Complex Learner that uses CNNs for digit classification.
+    
+    Args:
+        restore: (bool) Whether to restore the model or train a new one.
+    """
     if restore:
         mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
         learner = ComplexLearner()
