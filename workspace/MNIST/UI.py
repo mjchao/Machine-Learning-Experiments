@@ -13,7 +13,7 @@ from Tkinter import N, S, E, W, CENTER
 from Tkinter import Tk
 import tkMessageBox
 
-from Model import BuildSimpleLearner
+from Model import BuildComplexLearner
 from Model import WIDTH, HEIGHT
 
 class MainWindow(object):
@@ -76,7 +76,7 @@ class MainWindow(object):
         """Classifies the digit drawn on the canvas.
         """
         print "Classifying..."
-        pixels = np.zeros([1,WIDTH*HEIGHT])
+        pixels = np.zeros([1,WIDTH*HEIGHT], dtype=np.float32)
 
         for y in range(HEIGHT):
             for x in range(WIDTH):
@@ -104,7 +104,7 @@ class MainWindow(object):
 
 
 def main():
-    model = BuildSimpleLearner()
+    model = BuildComplexLearner(restore=True)
     main_window = MainWindow(model)
     main_window.Show()
 

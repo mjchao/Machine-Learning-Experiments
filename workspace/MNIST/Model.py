@@ -3,6 +3,8 @@ Created on Jul 3, 2016
 
 @author: mjchao
 '''
+import signal
+import sys
 import numpy as np
 import pandas as pd
 import sklearn
@@ -160,24 +162,40 @@ class ComplexLearner(object):
         b_fc2 = ComplexLearner.CreateBiasVariable([10])
         self.y_ = tf.nn.softmax(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
+        self.y_true_ = tf.placeholder(tf.float32, [None, 10])
+        cross_entropy_loss = tf.reduce_mean(-tf.reduce_sum(self.y_true_ * 
+                                tf.log(self.y_), reduction_indices=[1]))
+        self.train_step_ = tf.train.AdamOptimizer(1e-4).minimize(
+                                                            cross_entropy_loss)
+
+        init = tf.initialize_all_variables()
+        self.saver_ = tf.train.Saver()
+        self.sess_.run(init)
+
     def Train(self, train_data, batch_size=50, num_iters=20000):
-        y_true = tf.placeholder(tf.float32, [None, 10])
-        cross_entropy_loss = tf.reduce_mean(-tf.reduce_sum(self.y_ * 
-                                        tf.log(y_true), reduction_indices=[1]))
-        train_step = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy_loss)
         correct_prediction = tf.equal(tf.argmax(self.y_, 1), 
-                                      tf.argmax(y_true, 1))
+                                      tf.argmax(self.y_true_, 1))
         accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-        self.sess_.run(tf.initialize_all_variables())
         for i in range(num_iters):
             batch = train_data.next_batch(batch_size)
             if i % 100 == 0:
                 train_accuracy = accuracy.eval(feed_dict={self.x_: batch[0], 
-                    y_true: batch[1], self.keep_prob_: 1.0}, session=self.sess_)
+                    self.y_true_: batch[1], self.keep_prob_: 1.0}, 
+                                               session=self.sess_)
                 print "Step %d accuracy: %g" %(i, train_accuracy)
-            train_step.run(feed_dict={self.x_: batch[0], y_true: batch[1], 
-                    self.keep_prob_: 0.5}, session=self.sess_)
+            self.train_step_.run(feed_dict={self.x_: batch[0], self.y_true_:
+                        batch[1], self.keep_prob_: 0.5}, session=self.sess_)
+
+        self.Save("thresholded_model.ckpt")
+
+
+    def Predict(self, features):
+        """Predicts what digit the given data represents.
+        """
+        prediction = tf.argmax(self.y_, 1)
+        return self.sess_.run(prediction, 
+                              {self.x_: features, self.keep_prob_: 1.0})
 
     def Test(self, test_data):
         y_true = tf.placeholder(tf.float32, [None, 10])
@@ -188,18 +206,38 @@ class ComplexLearner(object):
             self.x_: test_data.images, y_true: test_data.labels, 
             self.keep_prob_: 1.0}, session=self.sess_)
 
-def BuildComplexLearner():
-    mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-    learner = ComplexLearner()
-    ThresholdPixels(mnist.train.images)
-    learner.Train(mnist.train)
-    ThresholdPixels(mnist.test.images)
-    learner.Test(mnist.test)
-    return learner
+    def Save(self, filename):
+        self.saver_.save(self.sess_, filename)
+
+    def Restore(self, filename):
+        self.saver_.restore(self.sess_, filename)
+
+
+def BuildComplexLearner(restore=True):
+    if restore:
+        mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+        learner = ComplexLearner()
+        learner.Restore("thresholded_model.ckpt")
+        return learner
+    else:
+        mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
+        learner = ComplexLearner()
+        ThresholdPixels(mnist.train.images)
+
+        def signal_handler(signal, frame):
+            print "Caught ctrl-c. Saving model then exiting..."
+            learner.Save("thresholded_ctrl_c.ckpt")
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
+        learner.Train(mnist.train)
+        ThresholdPixels(mnist.test.images)
+        learner.Test(mnist.test)
+        return learner
 
 
 def main():
-    BuildComplexLearner()
+    BuildComplexLearner(restore=True)
     #BuildSimpleLearner()
     #DrawInputs()
 
