@@ -13,8 +13,8 @@ from Tkinter import N, S, E, W, CENTER
 from Tkinter import Tk
 import tkMessageBox
 
-from Model_Prototype import BuildComplexLearner
-from Model_Prototype import WIDTH, HEIGHT
+from Model import BuildComplexLearner
+from Model import WIDTH, HEIGHT
 
 class MainWindow(object):
     """Main window that allows users to draw a digit and classify it.
