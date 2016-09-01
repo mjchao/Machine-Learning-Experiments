@@ -7,12 +7,11 @@ import re
 import sys
 import nltk
 import numpy as np
-import sklearn.linear_model
-import sklearn.multiclass
+import sklearn.ensemble
 import sklearn.preprocessing
 
 MAX_CATEGORIES = 250
-RF_TREES = 20
+RF_TREES = 100
 
 class WordIdDictionary(object):
     """Maps words to integer IDs.
@@ -21,7 +20,7 @@ class WordIdDictionary(object):
 
     # A maximum size hyperparameter for the dictionary so that we don't
     # include too many useless words
-    MAX_SIZE = 10000
+    MAX_SIZE = 250
 
     def __init__(self):
         self._word_to_id = {}
@@ -167,7 +166,7 @@ def BuildFeaturesAndLabels(dictionary, train_data):
 
 def Train(dictionary, train_data):
     X, y, mlb = BuildFeaturesAndLabels(dictionary, train_data)
-    clf = sklearn.multiclass.OneVsRestClassifier(sklearn.linear_model.SGDClassifier(loss="log"))
+    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=RF_TREES)
     clf.fit(X, y)
     return clf, mlb
 
@@ -176,11 +175,13 @@ def Test(dictionary, test_data, clf, mlb):
     X = BuildFeatures(dictionary, test_data)
     predictions = clf.predict_proba(X)
     for i in range(len(X)):
-        probabilities = predictions[i]
-        top_idxs = np.argsort(probabilities)
+        probabilities = np.zeros(len(mlb.classes_))
+        for j in range(len(mlb.classes_)):
+            probabilities[j] = predictions[j][i][0]
+        top_10_idxs = np.argsort(probabilities)
         output_str = ""
         for j in range(10):
-            output_str += str(mlb.classes_[top_idxs[j]]) + " "
+            output_str += str(mlb.classes_[top_10_idxs[j]]) + " "
         print output_str.strip()
 
 
