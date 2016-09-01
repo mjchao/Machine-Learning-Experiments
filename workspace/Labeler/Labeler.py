@@ -7,7 +7,8 @@ import re
 import sys
 import nltk
 import numpy as np
-import sklearn.ensemble
+import sklearn.linear_model
+import sklearn.multiclass
 import sklearn.preprocessing
 
 MAX_CATEGORIES = 250
@@ -166,7 +167,7 @@ def BuildFeaturesAndLabels(dictionary, train_data):
 
 def Train(dictionary, train_data):
     X, y, mlb = BuildFeaturesAndLabels(dictionary, train_data)
-    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=RF_TREES)
+    clf = sklearn.multiclass.OneVsRestClassifier(sklearn.linear_model.SGDClassifier(loss="log"))
     clf.fit(X, y)
     return clf, mlb
 
@@ -175,13 +176,11 @@ def Test(dictionary, test_data, clf, mlb):
     X = BuildFeatures(dictionary, test_data)
     predictions = clf.predict_proba(X)
     for i in range(len(X)):
-        probabilities = np.zeros(len(mlb.classes_))
-        for j in range(len(mlb.classes_)):
-            probabilities[j] = predictions[j][i][0]
-        top_10_idxs = np.argsort(probabilities)
+        probabilities = predictions[i]
+        top_idxs = np.argsort(probabilities)
         output_str = ""
         for j in range(10):
-            output_str += str(mlb.classes_[top_10_idxs[j]]) + " "
+            output_str += str(mlb.classes_[top_idxs[j]]) + " "
         print output_str.strip()
 
 
