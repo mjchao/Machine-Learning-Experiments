@@ -20,7 +20,7 @@ class WordIdDictionary(object):
 
     # A maximum size hyperparameter for the dictionary so that we don't
     # include too many useless words
-    MAX_SIZE = 250
+    MAX_SIZE = 5000
 
     def __init__(self):
         self._word_to_id = {}
@@ -117,11 +117,23 @@ def BuildWordIdDictionary(train_data):
                 else:
                     category_counts[label][word] = 1
 
-    # Compute entropies
     all_words_list = list(all_words)
-    entropies = np.zeros(len(all_words_list))
-    for word_idx in range(len(all_words_list)):
-        word = all_words_list[word_idx]
+    all_word_counts = np.zeros(len(all_words_list))
+    for i in range(len(all_words_list)):
+        word = all_words_list[i]
+        for j in range(MAX_CATEGORIES):
+            if word in category_counts[j]:
+                all_word_counts[i] += category_counts[j][word]
+
+    most_common_idxs = np.argsort(all_word_counts)
+    considered_words_list = [
+                             all_words_list[most_common_idxs[i]]
+                             for i in range(min(len(most_common_idxs),
+                                                5*WordIdDictionary.MAX_SIZE))]
+    # Compute entropies
+    entropies = np.zeros(len(considered_words_list))
+    for word_idx in range(len(considered_words_list)):
+        word = considered_words_list[word_idx]
         occurrences = np.zeros(MAX_CATEGORIES)
         for category in range(MAX_CATEGORIES):
             if word in category_counts[category]:
@@ -161,6 +173,7 @@ def BuildLabels(train_data):
 
 def BuildFeaturesAndLabels(dictionary, train_data):
     X = BuildFeatures(dictionary, train_data)
+    #print np.sum((np.sum(X, axis=1) - X[:,0]) == 0)
     y, mlb = BuildLabels(train_data)
     return X, y, mlb
 
