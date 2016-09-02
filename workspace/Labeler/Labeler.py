@@ -127,7 +127,7 @@ class BayesianClassifier(object):
         self._dictionary = dictionary
         self._weights = np.zeros((dictionary.Size(), MAX_CATEGORIES),
                                  dtype=np.float32)
-        self._weights += 1 / float(dictionary.Size())
+        self._weights += 1
         self._word_counts = np.zeros(dictionary.Size())
         i = 0
         for datum in train_data:
@@ -151,7 +151,8 @@ class BayesianClassifier(object):
             for word in sentence:
                 word_id = self._dictionary.GetId(word)
                 if word_id != 0:
-                    score *= self._weights[word_id][category] / self._word_counts[word_id]
+                    score *= (self._weights[word_id][category] /
+                              self._word_counts[word_id])
             scores[category] = score
         best_idxs = np.argsort(scores)[::-1]
         return best_idxs[:10]
@@ -160,10 +161,10 @@ class BayesianClassifier(object):
 def Train(dictionary, train_data):
     clf = BayesianClassifier()
     clf.fit(dictionary, train_data)
-    return clf, None
+    return clf
 
 
-def Test(dictionary, test_data, clf, mlb):
+def Test(dictionary, test_data, clf):
     for data in test_data:
         predictions = clf.predict(data)
         output_str = ""
@@ -177,8 +178,8 @@ def main():
     #print "Finished reading input"
     dictionary = BuildWordIdDictionary(train)
     #print "Finished building dictionary"
-    clf, mlb = Train(dictionary, train)
+    clf = Train(dictionary, train)
     #print "Finished training"
-    Test(dictionary, test, clf, mlb)
+    Test(dictionary, test, clf)
 
 if __name__ == "__main__": main()
