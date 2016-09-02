@@ -11,7 +11,7 @@ import sklearn.ensemble
 import sklearn.preprocessing
 
 MAX_CATEGORIES = 250
-RF_TREES = 100
+RF_TREES = 10
 
 class WordIdDictionary(object):
     """Maps words to integer IDs.
@@ -173,26 +173,25 @@ def Train(dictionary, train_data):
 
 def Test(dictionary, test_data, clf, mlb):
     X = BuildFeatures(dictionary, test_data)
-    predictions = clf.predict_proba(X)
+    predictions = np.array(clf.predict_proba(X))
     for i in range(len(X)):
-        probabilities = np.zeros(len(mlb.classes_))
-        for j in range(len(mlb.classes_)):
-            probabilities[j] = predictions[j][i][0]
-        top_10_idxs = np.argsort(probabilities)
+        probabilities = predictions[:,i,1]
+        best_idxs = np.argsort(probabilities)[::-1]
+        predicted_labels = np.array(mlb.classes_)[best_idxs[:10]]
         output_str = ""
-        for j in range(10):
-            output_str += str(mlb.classes_[top_10_idxs[j]]) + " "
-        print output_str.strip()
+        for label in predicted_labels:
+            output_str += str(label) + " "
+        print output_str
 
 
 def main():
-    print "Started"
+    #print "Started"
     train, test = ReadInput()
-    print "Finished reading input"
+    #print "Finished reading input"
     dictionary = BuildWordIdDictionary(train)
-    print "Finished building dictionary"
+    #print "Finished building dictionary"
     clf, mlb = Train(dictionary, train)
-    print "Finished testing"
+    #print "Finished testing"
     Test(dictionary, test, clf, mlb)
 
 if __name__ == "__main__": main()
