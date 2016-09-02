@@ -103,16 +103,28 @@ def BuildWordIdDictionary(train_data):
             entropy, word 2 has second lowest, ...)
     """
     all_words = set()
+    bigrams = {}
     for datum in train_data:
         sentence = datum[0]
-        for word in sentence:
-            all_words.add(word)
+        for i in range(len(sentence)-1):
+            all_words.add(sentence[i])
+            if (sentence[i], sentence[i+1]) in bigrams:
+                bigrams[(sentence[i], sentence[i+1])] += 1
+            else:
+                bigrams[(sentence[i], sentence[i+1])] = 1
+        all_words.add(sentence[-1])
     dictionary = WordIdDictionary()
 
     # Just add all words to dictionary. There's only about 16,000 of them
     # in the sample input.
     for word in all_words:
         dictionary.ProcessWord(word)
+
+    bigrams_list = list(bigrams.iteritems())
+    bigrams_list.sort(key=lambda x: -x[1])
+    for i in range(min(1000, len(bigrams_list))):
+        dictionary.ProcessWord(bigrams_list[i][0][0] + " " + bigrams_list[i][0][1])
+
     return dictionary
 
 
@@ -132,10 +144,15 @@ class BayesianClassifier(object):
         for datum in train_data:
             words = datum[0]
             labels = datum[1]
-            for word in words:
+            for i in range(len(words)):
+                word = words[i]
+                next_word = words[i+1] if i+1 < len(words) else None
                 for label in labels:
                     self._weights[dictionary.GetId(word)][label] += 1
                     self._word_counts[dictionary.GetId(word)] += 1
+                    if next_word is not None:
+                        self._weights[dictionary.GetId(word + " " + next_word)][label] += 1
+                        self._word_counts[dictionary.GetId(word + " " + next_word)] += 1
 
 
     def GetWeights(self):
@@ -146,11 +163,20 @@ class BayesianClassifier(object):
         scores = np.zeros(MAX_CATEGORIES)
         for category in range(MAX_CATEGORIES):
             score = 1.0
-            for word in sentence:
+            for i in range(len(sentence)):
+                word = sentence[i]
                 word_id = self._dictionary.GetId(word)
                 if word_id != 0:
                     score *= (self._weights[word_id][category] /
                               self._word_counts[word_id])
+
+                next_word = sentence[i+1] if i+1 < len(sentence) else None
+                if next_word is not None:
+                    bigram = word + " " + next_word
+                    bigram_id = self._dictionary.GetId(bigram)
+                    if bigram_id != 0:
+                        score *= (self._weights[bigram_id][category] /
+                                  self._word_counts[bigram_id])
             scores[category] = score
         best_idxs = np.argsort(scores)[::-1]
         return best_idxs[:10]
