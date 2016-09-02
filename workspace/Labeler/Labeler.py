@@ -141,10 +141,6 @@ class BagOfWordsClassifier(object):
                                  dtype=np.float32)
         self._weights += 1 / float(dictionary.Size())
         self._word_counts = np.zeros(dictionary.Size(), dtype=np.float32)
-
-        # how many times does c_i appear with c_j?
-        self._category_pairing_counts = np.ones((MAX_CATEGORIES, MAX_CATEGORIES))
-
         for datum in train_data:
             words = datum[0]
             labels = datum[1]
@@ -157,16 +153,6 @@ class BagOfWordsClassifier(object):
                     if next_word is not None:
                         self._weights[dictionary.GetId(word + " " + next_word)][label] += 1
                         self._word_counts[dictionary.GetId(word + " " + next_word)] += 1
-            for i in range(len(labels)):
-                for j in range(i+1, len(labels)):
-                    self._category_pairing_counts[labels[i]][labels[j]] += 1
-                    self._category_pairing_counts[labels[j]][labels[i]] += 1
-
-        self._category_pairing_prob = self._category_pairing_counts
-        for i in range(MAX_CATEGORIES):
-            self._category_pairing_prob[i, :] /= max(1.0, np.sum(self._category_pairing_prob[i, :]))
-        for i in range(MAX_CATEGORIES):
-            self._category_pairing_prob[i, i] = 0.0
 
 
     def GetWeights(self):
@@ -192,12 +178,8 @@ class BagOfWordsClassifier(object):
                         score *= (self._weights[bigram_id][category] /
                                   self._word_counts[bigram_id])
             scores[category] = score
-
-        best_idxs = []
-        best_idxs.append(np.argmax(scores))
-        for _ in range(1,10):
-            scores *= self._category_pairing_prob[best_idxs[-1], :]
-            best_idxs.append(np.argmax(scores))
+        #print np.sort(scores/scores.sum())[::-1][:10]
+        best_idxs = np.argsort(scores)[::-1]
         return best_idxs[:10]
 
 class HmmClassifier(object):
