@@ -127,11 +127,9 @@ class BayesianClassifier(object):
         self._dictionary = dictionary
         self._weights = np.zeros((dictionary.Size(), MAX_CATEGORIES),
                                  dtype=np.float32)
-        self._weights += 1
-        self._word_counts = np.zeros(dictionary.Size())
-        i = 0
+        self._weights += 1 / float(dictionary.Size())
+        self._word_counts = np.zeros(dictionary.Size(), dtype=np.float32)
         for datum in train_data:
-            i += 1
             words = datum[0]
             labels = datum[1]
             for word in words:
