@@ -16,11 +16,9 @@ class WordIdDictionary(object):
     """
     UNK = 0
 
-    # A maximum size hyperparameter for the dictionary so that we don't
-    # include too many useless words
-    MAX_SIZE = 5000
-
-    MAX_BIGRAMS = 1000
+    # Limit on the number of bigrams to use (currently, this says to use all
+    # of them).
+    MAX_BIGRAMS = 20000
 
     def __init__(self):
         self._word_to_id = {}
@@ -130,8 +128,8 @@ def BuildWordIdDictionary(train_data):
     return dictionary
 
 
-class BayesianClassifier(object):
-    """Applies a Bayesian model to the problem.
+class BagOfWordsClassifier(object):
+    """Applies a Bag of Words model and optimizes for P(category | words).
     """
 
     def __init__(self):
@@ -179,13 +177,19 @@ class BayesianClassifier(object):
                     if bigram_id != 0:
                         score *= (self._weights[bigram_id][category] /
                                   self._word_counts[bigram_id])
-            scores[category] = score
+            scores[category] = score if score != 1.0 else 0.0
+        print np.sort(scores/scores.sum())[::-1][:10]
         best_idxs = np.argsort(scores)[::-1]
         return best_idxs[:10]
 
+class HmmClassifier(object):
+    """Applies an HMM model and optimizes for P(w2 | w1, c)*P(w3 | w2, c)...
+    """
+    def __init__(self):
+        pass
 
 def Train(dictionary, train_data):
-    clf = BayesianClassifier()
+    clf = BagOfWordsClassifier()
     clf.fit(dictionary, train_data)
     return clf
 
