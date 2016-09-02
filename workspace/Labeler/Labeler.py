@@ -178,7 +178,7 @@ class BagOfWordsClassifier(object):
                         score *= (self._weights[bigram_id][category] /
                                   self._word_counts[bigram_id])
             scores[category] = score if score != 1.0 else 0.0
-        print np.sort(scores/scores.sum())[::-1][:10]
+        #print np.sort(scores/scores.sum())[::-1][:10]
         best_idxs = np.argsort(scores)[::-1]
         return best_idxs[:10]
 
