@@ -7,10 +7,6 @@ import re
 import sys
 import nltk
 import numpy as np
-import sklearn.ensemble
-import sklearn.multiclass
-import sklearn.preprocessing
-import sklearn.tree
 
 MAX_CATEGORIES = 250
 RF_TREES = 10
@@ -106,108 +102,83 @@ def BuildWordIdDictionary(train_data):
             assigned in order of increasing entropy. (e.g. word 1 has lowest
             entropy, word 2 has second lowest, ...)
     """
-    category_counts = [{} for _ in range(MAX_CATEGORIES)]
     all_words = set()
     for datum in train_data:
         sentence = datum[0]
-        labels = datum[1]
         for word in sentence:
             all_words.add(word)
-            for label in labels:
-                if word in category_counts[label]:
-                    category_counts[label][word] += 1
-                else:
-                    category_counts[label][word] = 1
-
-    all_words_list = list(all_words)
-    all_word_counts = np.zeros(len(all_words_list))
-    for i in range(len(all_words_list)):
-        word = all_words_list[i]
-        for j in range(MAX_CATEGORIES):
-            if word in category_counts[j]:
-                all_word_counts[i] += category_counts[j][word]
-
-    most_common_idxs = np.argsort(all_word_counts)
-    considered_words_list = [
-                             all_words_list[most_common_idxs[i]]
-                             for i in range(min(len(most_common_idxs),
-                                                5*WordIdDictionary.MAX_SIZE))]
-    # Compute entropies
-    entropies = np.zeros(len(considered_words_list))
-    for word_idx in range(len(considered_words_list)):
-        word = considered_words_list[word_idx]
-        occurrences = np.zeros(MAX_CATEGORIES)
-        for category in range(MAX_CATEGORIES):
-            if word in category_counts[category]:
-                occurrences[category] += category_counts[category][word]
-
-        probabilities = occurrences / np.float32(occurrences.sum())
-        # Note: ignore numpy warning of divide by zero encountered in log2.
-        # That's not possible because we apply np.where(probabilities > 0).
-        # Also, the test cases pass
-        entropy = np.sum(np.where(probabilities > 0,
-                                  -probabilities * np.log2(probabilities), 0))
-        entropies[word_idx] = entropy
-
-    word_idxs_by_entropy = np.argsort(entropies)
     dictionary = WordIdDictionary()
-    for i in range(min(WordIdDictionary.MAX_SIZE,
-                       len(word_idxs_by_entropy))):
-        dictionary.ProcessWord(all_words_list[word_idxs_by_entropy[i]])
 
+    # Just add all words to dictionary. There's only about 16,000 of them
+    # in the sample input.
+    for word in all_words:
+        dictionary.ProcessWord(word)
     return dictionary
 
 
-def BuildFeatures(dictionary, train_data):
-    X_unprocessed = np.zeros((len(train_data), dictionary.Size()))
-    for i in range(len(train_data)):
-        sentence = train_data[i][0]
-        for word in sentence:
-            X_unprocessed[i][dictionary.GetId(word)] += 1
+class BayesianClassifier(object):
+    """Applies a Bayesian model to the problem.
+    """
 
-    X = X_unprocessed
-    return X
+    def __init__(self):
+        pass
 
-def BuildLabels(train_data):
-    mlb = sklearn.preprocessing.MultiLabelBinarizer()
-    y = mlb.fit_transform([datum[1] for datum in train_data])
-    return y, mlb
+    def fit(self, dictionary, train_data):
+        self._dictionary = dictionary
+        self._weights = np.zeros((dictionary.Size(), MAX_CATEGORIES),
+                                 dtype=np.float32)
+        self._weights += 1 / float(dictionary.Size())
+        self._word_counts = np.zeros(dictionary.Size())
+        i = 0
+        for datum in train_data:
+            i += 1
+            words = datum[0]
+            labels = datum[1]
+            for word in words:
+                for label in labels:
+                    self._weights[dictionary.GetId(word)][label] += 1
+                    self._word_counts[dictionary.GetId(word)] += 1
 
-def BuildFeaturesAndLabels(dictionary, train_data):
-    X = BuildFeatures(dictionary, train_data)
-    #print np.sum((np.sum(X, axis=1) - X[:,0]) == 0)
-    y, mlb = BuildLabels(train_data)
-    return X, y, mlb
+
+    def GetWeights(self):
+        return self._weights
+
+    def predict(self, sentence):
+        # compute P(c | w1, ..., wj)
+        scores = np.zeros(MAX_CATEGORIES)
+        for category in range(MAX_CATEGORIES):
+            score = 1.0
+            for word in sentence:
+                word_id = self._dictionary.GetId(word)
+                if word_id != 0:
+                    score *= self._weights[word_id][category] / self._word_counts[word_id]
+            scores[category] = score
+        best_idxs = np.argsort(scores)[::-1]
+        return best_idxs[:10]
+
 
 def Train(dictionary, train_data):
-    X, y, mlb = BuildFeaturesAndLabels(dictionary, train_data)
-    clf = sklearn.multiclass.OneVsRestClassifier(sklearn.ensemble.AdaBoostClassifier(sklearn.tree.DecisionTreeClassifier(max_depth=3), n_estimators=250))
-    clf.fit(X, y)
-    return clf, mlb
+    clf = BayesianClassifier()
+    clf.fit(dictionary, train_data)
+    return clf, None
 
 
 def Test(dictionary, test_data, clf, mlb):
-    X = BuildFeatures(dictionary, test_data)
-    predictions = np.array(clf.predict_proba(X))
-    print predictions
-    for i in range(len(X)):
-        probabilities = predictions[i,:]
-        best_idxs = np.argsort(probabilities)[::-1]
-        predicted_labels = np.array(mlb.classes_)[best_idxs[:10]]
+    for data in test_data:
+        predictions = clf.predict(data)
         output_str = ""
-        for label in predicted_labels:
-            output_str += str(label) + " "
-        print output_str
+        for pred in predictions:
+            output_str += str(pred) + " "
+        print output_str.strip()
 
 
 def main():
-    #print "Started"
     train, test = ReadInput()
     #print "Finished reading input"
     dictionary = BuildWordIdDictionary(train)
     #print "Finished building dictionary"
     clf, mlb = Train(dictionary, train)
-    #print "Finished testing"
+    #print "Finished training"
     Test(dictionary, test, clf, mlb)
 
 if __name__ == "__main__": main()
