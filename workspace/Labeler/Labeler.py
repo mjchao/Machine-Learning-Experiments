@@ -8,7 +8,9 @@ import sys
 import nltk
 import numpy as np
 import sklearn.ensemble
+import sklearn.multiclass
 import sklearn.preprocessing
+import sklearn.tree
 
 MAX_CATEGORIES = 250
 RF_TREES = 10
@@ -179,7 +181,7 @@ def BuildFeaturesAndLabels(dictionary, train_data):
 
 def Train(dictionary, train_data):
     X, y, mlb = BuildFeaturesAndLabels(dictionary, train_data)
-    clf = sklearn.ensemble.RandomForestClassifier(n_estimators=RF_TREES)
+    clf = sklearn.multiclass.OneVsRestClassifier(sklearn.ensemble.AdaBoostClassifier(sklearn.tree.DecisionTreeClassifier(max_depth=3), n_estimators=250))
     clf.fit(X, y)
     return clf, mlb
 
@@ -187,8 +189,9 @@ def Train(dictionary, train_data):
 def Test(dictionary, test_data, clf, mlb):
     X = BuildFeatures(dictionary, test_data)
     predictions = np.array(clf.predict_proba(X))
+    print predictions
     for i in range(len(X)):
-        probabilities = predictions[:,i,1]
+        probabilities = predictions[i,:]
         best_idxs = np.argsort(probabilities)[::-1]
         predicted_labels = np.array(mlb.classes_)[best_idxs[:10]]
         output_str = ""
