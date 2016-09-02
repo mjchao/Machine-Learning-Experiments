@@ -20,6 +20,8 @@ class WordIdDictionary(object):
     # include too many useless words
     MAX_SIZE = 5000
 
+    MAX_BIGRAMS = 1000
+
     def __init__(self):
         self._word_to_id = {}
         self._id_to_word = {}
@@ -122,7 +124,7 @@ def BuildWordIdDictionary(train_data):
 
     bigrams_list = list(bigrams.iteritems())
     bigrams_list.sort(key=lambda x: -x[1])
-    for i in range(min(1000, len(bigrams_list))):
+    for i in range(min(WordIdDictionary.MAX_BIGRAMS, len(bigrams_list))):
         dictionary.ProcessWord(bigrams_list[i][0][0] + " " + bigrams_list[i][0][1])
 
     return dictionary
